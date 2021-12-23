@@ -24,13 +24,14 @@ def get_new_files(path : str) -> list:
 
 #get relevant columns from file
 def get_relevant_columns(file : Path,
+                        trg_name : Optional[str] = 'Sheet2',
                         target_cols : Optional[list] = ['new to nc fusion','player_id','ethnicity']) -> None:
 
-    df = pd.read_excel(file, sheet_name='Sheet2', engine='openpyxl')
+    df = pd.read_excel(file, sheet_name=trg_name, engine='openpyxl')
     logger.info(f'the following columns are present in the file: {df.columns.tolist()}')
 
     df = df.loc[:,df.columns.str.contains('|'.join(target_cols),case=False)]
-    logger.info(f'the following columns were found: {df.columns} in {file.name}')
+    logger.info(f'the following columns were found: {df.columns.tolist()} in {file.name}')
 
     file_dt = create_iso_date(file)
     move_file(file_dt, file.parent.joinpath('processed'))

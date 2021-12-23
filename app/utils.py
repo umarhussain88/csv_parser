@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 
 
@@ -11,8 +12,10 @@ def logger(name : str) -> logging.Logger:
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
 
+    if not Path(__file__).parent.parent.joinpath('logs').exists():
+        Path(__file__).parent.parent.joinpath('logs').mkdir(parents=True)  
     #create file handler and set level to warning
-    fh = logging.FileHandler('logs/app.log', mode='w')
+    fh = logging.FileHandler('logs/app.log', mode='a')
     fh.setLevel(logging.INFO)
     
     #create formatter
