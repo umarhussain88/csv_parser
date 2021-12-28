@@ -2,9 +2,10 @@ from typing import Optional
 import pandas as pd 
 from pathlib import Path 
 from app import utils 
-
+from sys import argv
 
 logger = utils.logger(__name__)
+
 
 
 
@@ -17,17 +18,16 @@ def get_new_files(path : str) -> list:
     
 
 
-    files = list(Path(path).glob('*.xlsx*'))
+    files = list(Path(path).glob('*.csv'))
     logger.info(f'{len(files)} files found')
 
     return files
 
 #get relevant columns from file
 def get_relevant_columns(file : Path,
-                        trg_name : Optional[str] = 'Sheet2',
                         target_cols : Optional[list] = ['new to nc fusion','player_id','ethnicity']) -> None:
 
-    df = pd.read_excel(file, sheet_name=trg_name, engine='openpyxl')
+    df = pd.read_csv(file)
     logger.info(f'the following columns are present in the file: {df.columns.tolist()}')
 
     df = df.loc[:,df.columns.str.contains('|'.join(target_cols),case=False)]
@@ -37,8 +37,14 @@ def get_relevant_columns(file : Path,
     move_file(file_dt, file.parent.joinpath('processed'))
     
     curated_file = file_dt.parent.joinpath('curated',f"{file_dt.stem}.csv")
+
+    df.columns = df.columns.str.lower().str.strip()
+    df.columns = df.columns.str.replace('(ethnicity).*',r'\1',regex=True)
+
     df.to_csv(curated_file, index=False)
     logger.info(f'file was moved to curated folder - {curated_file}')
+
+    return df.assign(file_name=file.stem)
 
 #create iso date for file
 def create_iso_date(file : Path) -> str:
@@ -66,14 +72,44 @@ def move_file(file : Path, processed_path : Path) -> None:
 
 
     
-         
+def log_file_metadata(data_frames : list) -> None:
+
+    final = pd.concat(data_frames)
+
+    df2 = (final.loc[final['program_code'].ne(-1)]
+        .melt(id_vars=['file_name','program_code','extract_year'],var_name='column_name')
+        .drop_duplicates(subset=['program_code','column_name'])
+        .dropna(subset=['value'])
+        .groupby(['file_name','program_code','extract_year','column_name'])['column_name'].count().unstack(-1)
+        .reset_index()
+        
+        ).fillna(0)
+    
+    trg_path = Path(__file__).joinpath('files/process_log')
+    df2.to_parquet(trg_path,partition_cols=['extract_year'],engine='fastparquet')
+
+
+
 
 
 
 if __name__ == '__main__':
     logger.info('starting')
-    files = get_new_files('/home/umarh/csv_parser/files')
+    logger.info(f'argv: {argv[1]}')
+
+    file_path = Path(argv[1])
+
+    if not file_path.is_dir():
+        raise Exception(f'Path : {file_path} is not a directory')
+        logger.error('Path is not a directory')
+
+    files = get_new_files(file_path)
+    dfs = []
     for file in files:
-        get_relevant_columns(file)
+        dfs.append(get_relevant_columns(file))
+
+    log_file_metadata(dfs)
+    
+
     logger.info('finished')
     
