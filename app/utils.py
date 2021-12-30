@@ -15,7 +15,7 @@ def logger(name : str) -> logging.Logger:
     if not Path(__file__).parent.parent.joinpath('logs').exists():
         Path(__file__).parent.parent.joinpath('logs').mkdir(parents=True)  
     #create file handler and set level to warning
-    fh = logging.FileHandler('logs/app.log', mode='a')
+    fh = logging.FileHandler('logs/app.log', mode='w')
     fh.setLevel(logging.INFO)
     
     #create formatter
