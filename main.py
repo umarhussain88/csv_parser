@@ -27,14 +27,14 @@ def get_new_files(path : str) -> list:
 
 
 
-    return [f for f in files if f.stem in new_files]
+    return new_files
 
 def check_for_processed_files(files : list) -> list:
     
     trg_file = Path(__file__).parent.joinpath('files/process_log')
     if not Path(trg_file).is_dir():
         logger.info('No processed files found first run')
-        return None
+        return files
     else:
         log_files = pd.read_parquet(trg_file,engine='fastparquet')
         file_df =  pd.DataFrame([f.stem for f in files], columns=['file_name'])
@@ -52,9 +52,9 @@ def get_relevant_columns(file : Path,
 
     file_dt = create_iso_date(file)
     
-    move_file(file_dt, Path(__file__).parent.joinpath('files/processed'))
+    move_file(file_dt, Path(__file__).parent.joinpath('processed'))
     
-    curated_file = Path(__file__).parent.joinpath('files/curated',f"{file_dt.stem}.csv")
+    curated_file = Path(__file__).parent.joinpath('files','curated',f"{file_dt.stem}.csv")
 
     df.columns = df.columns.str.lower().str.strip()
     df.columns = df.columns.str.replace('(ethnicity).*',r'\1',regex=True)
@@ -111,7 +111,7 @@ def log_file_metadata(data_frames : list) -> None:
 
 if __name__ == '__main__':
     logger.info('starting')
-    argv = ['','/home/umarh/csv_parser/files/club209-reports-playmetrics-prod']
+    # argv = ['',r"C:\Users\umarh\projects\csv_parser\files"]
     logger.info(f'argv: {argv[1]}')
 
     file_path = Path(argv[1])
