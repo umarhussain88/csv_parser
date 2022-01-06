@@ -2,8 +2,7 @@ from typing import Optional
 import pandas as pd 
 from pathlib import Path 
 from app import utils 
-from sys import argv
-
+from sys import argv, exit
 logger = utils.logger(__name__)
 
 #set argv for debug
@@ -31,14 +30,14 @@ def get_new_files(path : str) -> list:
 
 def check_for_processed_files(files : list) -> list:
     
-    trg_file = Path(__file__).parent.joinpath('files/process_log')
+    trg_file = Path(__file__).parent.joinpath('process_log')
     if not Path(trg_file).is_dir():
         logger.info('No processed files found first run')
         return files
     else:
         log_files = pd.read_parquet(trg_file,engine='fastparquet')
-        file_df =  pd.DataFrame([f.stem for f in files], columns=['file_name'])
-        return file_df.loc[~file_df['file_name'].isin(log_files['file_name'])]['file_name'].tolist()
+        file_df =  pd.DataFrame([(f.stem, f)for f in files], columns=['file_name','file_path'])
+        return file_df.loc[~file_df['file_name'].isin(log_files['file_name'])]['file_path'].tolist()
 
 #get relevant columns from file
 def get_relevant_columns(file : Path,
@@ -52,9 +51,9 @@ def get_relevant_columns(file : Path,
 
     file_dt = create_iso_date(file)
     
-    move_file(file_dt, Path(__file__).parent.joinpath('processed'))
+    move_file(file_dt, Path(file_dt).parent.joinpath('processed'))
     
-    curated_file = Path(__file__).parent.joinpath('files','curated',f"{file_dt.stem}.csv")
+    curated_file = Path(file_dt).parent.joinpath('curated',f"{file_dt.stem}.csv")
 
     df.columns = df.columns.str.lower().str.strip()
     df.columns = df.columns.str.replace('(ethnicity).*',r'\1',regex=True)
@@ -104,30 +103,36 @@ def log_file_metadata(data_frames : list) -> None:
         
         ).fillna(0)
 
-    trg_path = Path(__file__).parent.joinpath('files/process_log')
+    trg_path = Path(__file__).parent.joinpath('process_log')
     df2.to_parquet(trg_path,partition_cols=['extract_year'],engine='fastparquet')
 
 
 
 if __name__ == '__main__':
-    logger.info('starting')
-    # argv = ['',r"C:\Users\umarh\projects\csv_parser\files"]
-    logger.info(f'argv: {argv[1]}')
+    #catch any exception 
+    try:
+        logger.info('starting')
+        # argv = ['.\\main.py',r"C:\Users\umarh\Documents\expertmoney\test"]
+        logger.info(f'argv: {argv[0], argv[1]}')
 
-    file_path = Path(argv[1])
+        file_path = Path(argv[1])
 
-    if not file_path.is_dir():
-        raise Exception(f'Path : {file_path} is not a directory')
-        logger.error('Path is not a directory')
+        if not file_path.is_dir():
+            raise Exception(f'Path : {file_path} is not a directory')
+            logger.error('Path is not a directory')
 
-    files = get_new_files(file_path)
-    dfs = []
-    for file in files:
-        dfs.append(get_relevant_columns(file))
+        files = get_new_files(file_path)
+        dfs = []
+        for file in files:
+            dfs.append(get_relevant_columns(file))
 
-    if len(dfs) > 0:
-        log_file_metadata(dfs)
-    else:
-        logger.info('no files to process')
-    logger.info('finished')
+        if len(dfs) > 0:
+            log_file_metadata(dfs)
+        else:
+            logger.info('no files to process')
+        logger.info('finished')
+    except Exception as e:
+        logger.error(e)
+        logger.error('exiting')
+        exit(1)
     

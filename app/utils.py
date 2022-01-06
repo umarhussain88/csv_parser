@@ -19,7 +19,7 @@ def logger(name : str) -> logging.Logger:
     fh.setLevel(logging.INFO)
     
     #create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s - %(filename)s - %(lineno)d')
     
     #add formatter to ch
     ch.setFormatter(formatter)

@@ -132,4 +132,5 @@ files
 *.zip
 *.ipynb
 *.csv
+/process_log
 
